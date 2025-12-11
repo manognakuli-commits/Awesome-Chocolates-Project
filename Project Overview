@@ -1,0 +1,308 @@
+Project overview
+This Power BI project demonstrates an end‑to‑end analytics workflow: starting from raw data, cleaning and transforming it with Power Query, designing a star schema data model, building DAX measures (including time intelligence), and delivering an interactive, well‑formatted report with thoughtful UX features (slicers, tooltips, conditional formatting, and KPIs).
+
+The focus is on showing not just visuals, but good modeling practices, reusable measures, and report design that supports real‑world business questions.
+
+Data preparation with Power Query
+Data cleaning and adding columns
+I used Power Query as the first layer of transformation before modeling and DAX.
+
+Standardized data types: I ensured that numeric, date, and text fields were correctly typed to avoid calculation and relationship issues later in the model.
+
+Removed noise and errors: I handled missing values, removed duplicate rows where appropriate, and filtered out invalid or out‑of‑scope records (for example, incomplete transactions or test data).
+
+Created calculated columns in Power Query: Instead of immediately relying on DAX, I added some logic directly in Power Query, such as:
+
+Cleaned categories: Normalizing inconsistent category names (e.g., “North region” vs “North Region”).
+
+Derived fields: Creating new columns like “Year”, “Month Name”, or a combined “Full Name” from first and last name, when those were better handled at the query stage.
+
+Business flags: Adding simple flags like “IsWeekend”, “IsHighValueOrder”, etc., to simplify later DAX.
+
+Documented steps: Every transformation step in Power Query is visible in the Applied Steps pane, serving as a transparent, reproducible ETL pipeline for the report.
+
+Data modeling and star schema
+Star schema design
+I structured the model using a star schema to optimize performance, reduce ambiguity, and simplify DAX.
+
+Fact tables: Contain transactional or numeric data (for example, Sales Fact, Orders Fact). These tables hold measures and foreign keys to dimensions.
+
+Dimension tables: Contain descriptive attributes, used for slicing and grouping (for example, Date/Calendar, Customer, Product, Region). These tables typically have a surrogate key and support hierarchies.
+
+Relationships: I created one‑to‑many relationships from each dimension to the corresponding fact table. This supports clean filter propagation and makes visuals easier to reason about.
+
+How I connected the tables
+Relationship direction: I primarily used single‑direction relationships from dimension to fact, avoiding unnecessary bidirectional relationships to prevent filter ambiguity and performance problems.
+
+Keys and cardinality:
+
+Ensured dimension keys are unique.
+
+Verified that fact tables reference valid keys in the dimensions.
+
+Used role‑playing or separate relationships when needed (e.g., Order Date vs Ship Date via a shared Date dimension, managed with inactive relationships and USERELATIONSHIP in DAX when appropriate).
+
+Model cleanliness: I hid technical key columns from the report view to maintain a user‑friendly field list, exposing only business‑relevant columns.
+
+DAX foundations and evaluation context
+Introduction to DAX in the project
+I used DAX for:
+
+Measures (preferred over calculated columns) to handle aggregations and business logic.
+
+Time intelligence (Year on Year comparisons, date‑driven metrics).
+
+Dynamic calculations that respond to filters and slicers.
+
+Evaluation context
+Throughout the project, I was intentional about row context vs filter context:
+
+Row context: When iterating over rows (e.g., with iterators like SUMX, FILTER), I used it to calculate row‑by‑row derived values.
+
+Filter context: I built measures that respond to user selections (slicers, filters, cross‑highlights). I leveraged functions like CALCULATE to modify this context for scenarios such as:
+
+Comparing current period to a prior period.
+
+Calculating totals ignoring certain filters.
+
+Isolating a specific segment or category.
+
+Understanding and explicitly controlling evaluation context was critical for accurate Year on Year calculations and TopN analytics.
+
+DAX techniques used
+Core measures and remixing DAX measures
+I structured my DAX with reusable base measures:
+
+Base measures: Examples include:
+
+Total Sales
+
+Total Quantity
+
+Total Customers
+
+Remixing measures: I then built more advanced measures by referencing those base measures instead of repeating logic, such as:
+
+Sales YoY
+
+Sales Growth %
+
+TopN Category Sales
+
+Sales excluding a particular segment
+
+This modular approach improves maintainability and keeps the model consistent.
+
+Using VAR in DAX
+I used VAR frequently in complex measures to:
+
+Store intermediate results: For example, capturing current year value and prior year value separately, then using them in a final expression.
+
+Improve readability: Breaking down a long CALCULATE or nested function into understandable pieces.
+
+Enhance performance: Avoiding repeated calculation of the same expression within a measure.
+
+A typical pattern in this project: capture multiple intermediate values in VAR, then use a RETURN block to compute a final metric.
+
+Working with calendar tables and time intelligence
+Calendar table
+I created or used a dedicated calendar table to support time‑based analysis:
+
+Continuous date range: The calendar covers all dates in the fact data, supporting daily, monthly, and yearly aggregations.
+
+Date attributes: The table includes columns such as:
+
+Year
+
+Month
+
+Month Number
+
+Quarter
+
+Year‑Month (for sorting and grouping)
+
+Day of week
+
+Marked as date table: In the model, I marked this as the official Date table, ensuring accurate time intelligence behavior.
+
+Year on Year comparisons with DAX
+Using the calendar table and time intelligence functions, I implemented:
+
+Current vs previous year metrics: Measures like:
+
+Current Year Sales
+
+Previous Year Sales
+
+Year on Year Difference
+
+Year on Year % Growth
+
+Time intelligence patterns: Leveraged functions such as DATEADD or similar patterns to shift the filter context by one year and compare:
+
+Returning the prior year’s value for the same time frame.
+
+Calculating growth and variance metrics that automatically update based on the selected date range.
+
+These measures are visualized in line charts and KPIs to highlight trends over time.
+
+Report design, interactions, and visuals
+Customizing Power BI report interactions
+I did not rely on default interactions alone. Instead, I:
+
+Configured visual interactions: For each page, I controlled how one visual affects another (highlight, filter, or none) so that the report tells a coherent story and avoids confusing cross‑filters.
+
+Used drill‑through / drill‑down where appropriate: Allowing users to move from summary views (e.g., overall performance) to detailed views (e.g., specific product or region).
+
+This ensured that interactions support the analysis, instead of overwhelming users with unexpected behavior.
+
+Visual & report filters and slicers
+Report‑level, page‑level, and visual‑level filters: I structured filters based on their purpose:
+
+Report‑level filters for global constraints (for example, excluding test data across all pages).
+
+Page‑level filters for context specific to a page (such as viewing only a certain business unit on a dedicated page).
+
+Visual‑level filters to focus charts on specific segments or TopN values.
+
+Slicers: I used slicers to allow users to filter by:
+
+Date range (using the calendar table).
+
+Dimensions like region, product, customer segment, etc.
+
+I also formatted slicers for usability, using appropriate orientation (vertical/horizontal), selection controls (single vs multi‑select), and clear labeling.
+
+Conditional formatting
+Conditional formatting was used to enhance interpretability without clutter:
+
+Measure‑based formatting: Used field values to drive color, data bars, or icons in tables and matrices (e.g., highlighting negative growth, above‑target performance, or outlier values).
+
+Visual emphasis: Applied consistent color rules to show performance categories (e.g., red for below target, green for above target), improving the speed of insight.
+
+Visuals used in the report
+Line charts
+Time series analysis: Line charts display trends such as sales over time, often with:
+
+Multiple measures (e.g., current vs prior year).
+
+Year on Year growth overlay, where relevant.
+
+Granularity control: Users can view performance by month, quarter, or year through the date hierarchy or dedicated slicers.
+
+Donut and pie charts
+Share of total: Used donut/pie charts sparingly to show distribution by category (e.g., share of sales by region or segment).
+
+Emphasis on TopN: Sometimes combined with TopN logic, such as showing only top categories and grouping the rest into “Others”.
+
+TopN values with visual filters
+TopN filtering: I used visual‑level filters to display only the top (or bottom) categories based on a selected measure, for example:
+
+Top 5 products by sales.
+
+Top 10 customers by revenue.
+
+Dynamic focus: This kept visuals from becoming overcrowded and highlighted the most important drivers.
+
+Treemap visual
+Hierarchical contribution analysis: Treemaps were used to show contribution across categories in a compact space, for example:
+
+Product categories and subcategories.
+
+Regions and sub‑regions.
+
+The size of each rectangle represents its proportion of the metric (e.g., sales), making it easy to see which areas dominate.
+
+KPI card visuals
+Key performance indicators: KPI cards summarized critical metrics such as:
+
+Total Sales
+
+YoY Growth
+
+Target vs Actual (where relevant)
+
+Status and trend: KPI visuals show the current value, comparison to a prior period, and sometimes an indicator or trend line to give quick at‑a‑glance status.
+
+Images, tooltips, and UX details
+Using pictures (Image URL) in tables
+Image URLs in table visuals: I used Image URL columns in tables to display icons or product images. This improves readability and makes the report more engaging, especially in product or entity‑focused views.
+
+Adding images to the report
+Branding and context: I added static images such as company logos, icons, or simple design elements to:
+
+Reinforce branding.
+
+Provide visual cues for navigation or section separation.
+
+Customizing tooltips
+Enhanced tooltips: I configured tooltips to show additional metrics when hovering over data points:
+
+Related KPIs.
+
+Detail about the selected category or time period.
+
+This offers deeper insight without permanently crowding the main canvas.
+
+Table formatting
+Readable, business‑ready tables: I formatted table and matrix visuals to:
+
+Adjust column widths and alignment.
+
+Apply alternating row colors for readability.
+
+Use conditional formatting where appropriate.
+
+Hide unnecessary subtotals or totals, depending on context.
+
+The aim was to balance detail with clarity.
+
+Report development process and testing
+Report mockups
+Before finalizing the report, I:
+
+Sketched mockups: Planned page layouts, deciding which visuals and KPIs should appear on each page and how users would navigate.
+
+Focused on user questions: Designed each page around specific analytical questions (e.g., performance over time, top performers, regional breakdowns) instead of randomly placing visuals.
+
+This helped ensure the final report is aligned to a real analytical story.
+
+Testing the Power BI report
+Data validation: Compared key totals and metrics against source systems or expected results to verify that transformations, relationships, and DAX logic were correct.
+
+Filter and slicer testing: Checked how different combinations of slicers and filters affected each visual, ensuring:
+
+No unexpected blank results (unless intentional).
+
+Users cannot accidentally see inconsistent or misleading combinations.
+
+Performance considerations: Monitored how quickly visuals loaded and made adjustments to DAX or model design where necessary.
+
+Tips, tricks, and concepts applied
+Throughout the project, I incorporated many practical Power BI techniques, such as:
+
+Using measures instead of calculated columns where possible.
+
+Hiding technical columns and tables not meant for end users.
+
+Creating reusable DAX patterns and leveraging VAR to keep logic clean.
+
+Using consistent color schemes and alignment across pages.
+
+Designing with both desktop and potential Power BI Service use in mind.
+
+How you can describe it on GitHub
+You can adapt this into sections in your README like:
+
+“Overview”
+
+“Data Preparation (Power Query)”
+
+“Data Modeling (Star Schema)”
+
+“DAX and Time Intelligence”
+
+“Report Design and Visuals”
+
+“Testing and Best Practices”
